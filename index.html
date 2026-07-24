@@ -8,7 +8,7 @@
   <title>VerbFit Deutsch</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%236d28d9'/%3E%3Cpath d='M17 17h30v30H17z' rx='7' fill='%23facc15'/%3E%3Cpath d='M24 25h16M24 32h13M24 39h9' stroke='%234c1d95' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20260725-4">
+  <link rel="stylesheet" href="styles.css?v=20260725-5">
 </head>
 <body>
   <div class="app-shell">
@@ -171,6 +171,7 @@
       <div class="admin-tabs">
         <button class="tab active" type="button" data-admin-tab="verb">Neues Verb</button>
         <button class="tab" type="button" data-admin-tab="list">Öffentliche Liste</button>
+        <button class="tab" type="button" data-admin-tab="users">Benutzer</button>
       </div>
 
       <section id="adminVerbPanel" class="admin-panel">
@@ -212,11 +213,27 @@
         <h3 class="subheading">Vorhandene öffentliche Listen</h3>
         <div id="adminPublicLists" class="saved-lists"></div>
       </section>
+
+      <section id="adminUsersPanel" class="admin-panel" hidden>
+        <div class="admin-users-toolbar">
+          <label>Profil suchen<input id="adminUserSearch" type="search" placeholder="Benutzername suchen …"></label>
+          <button class="secondary-button" id="refreshAdminUsersButton" type="button">Aktualisieren</button>
+          <p class="selection-count" id="adminUserCount">0 Profile</p>
+        </div>
+        <div class="admin-users-layout">
+          <div class="admin-user-list" id="adminUserList"></div>
+          <div class="admin-user-detail" id="adminUserDetail">
+            <div class="admin-user-empty"><strong>Profil auswählen</strong><span>Tippe auf einen Namen, um die letzten 14 Tage zu sehen.</span></div>
+          </div>
+        </div>
+        <p class="form-note">Die tägliche Trefferquote wird ab dieser Version gespeichert. Für frühere Tage ohne genaue Trefferzahl erscheint „–“.</p>
+        <p class="form-error" id="adminUsersError" role="alert"></p>
+      </section>
     </div>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script type="module" src="js/app.js?v=20260725-4"></script>
+  <script type="module" src="js/app.js?v=20260725-5"></script>
 </body>
 </html>
