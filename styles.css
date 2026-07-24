@@ -206,36 +206,65 @@ main { width: min(1120px, calc(100% - 2rem)); margin: 0 auto; padding: clamp(2re
 }
 
 @media (max-width: 590px) {
-  .topbar { min-height: 68px; padding: .65rem .75rem; }
+  html, body { height: 100%; overflow: hidden; }
+  body { min-height: 100dvh; }
+  .app-shell { display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+  .topbar { flex: 0 0 auto; min-height: 0; padding: .45rem .5rem; }
   .brand span:last-child { display: none; }
-  .brand-mark { width: 40px; height: 40px; }
-  .toolbar { gap: .35rem; flex: 1; }
+  .brand-mark { width: 36px; height: 36px; border-radius: 11px; }
+  .toolbar { gap: .25rem; flex: 1; }
   .toolbar-menu { position: static; }
   .menu-panel {
     top: calc(100% + .35rem);
-    left: .75rem;
-    right: .75rem;
+    left: .5rem;
+    right: .5rem;
     z-index: 1;
     width: auto;
     max-height: min(24rem, calc(100dvh - 7rem));
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  .toolbar-button, .profile-button { min-height: 40px; }
-  .toolbar-button { padding: .55rem .65rem; }
+  .toolbar-button, .profile-button { min-height: 36px; }
+  .toolbar-button { padding: .45rem .55rem; }
   .profile-button { margin-left: auto; }
-  main { width: min(100% - 1rem, 1120px); padding-top: 2rem; }
+  .list-picker select { padding-top: .48rem; padding-bottom: .48rem; }
+  main {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    width: min(100% - .75rem, 1120px);
+    padding: .5rem 0;
+    overflow: hidden;
+  }
+  .session-overview { flex: 0 0 auto; margin-bottom: .45rem; }
   .session-box { gap: .35rem; }
-  .session-box div { min-width: 0; padding: .65rem .3rem; }
-  .practice-area { border-radius: 22px; padding: .75rem; }
-  .card-scene { height: min(116vw, 390px); }
-  .card-face { border-radius: 23px; padding: 1.15rem; }
+  .session-box div { min-width: 0; padding: .42rem .25rem; border-radius: 13px; }
+  .session-box strong { font-size: 1.08rem; }
+  .session-box span { font-size: .61rem; }
+  .practice-area {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 22px;
+    padding: .55rem;
+  }
+  .progress-track { flex: 0 0 auto; height: 6px; }
+  .daily-hint { flex: 0 0 auto; margin: .32rem 0 .48rem; font-size: clamp(.64rem, 2.9vw, .75rem); line-height: 1.2; }
+  .card-scene { flex: 1 1 0; min-height: 0; height: auto; max-height: min(116vw, 390px); }
+  .card-face { border-radius: 23px; padding: .85rem; }
   .flashcard { border-radius: 23px; }
-  .card-content h2 { font-size: clamp(2.25rem, 13vw, 4rem); }
-  .type-badge { top: .8rem; right: .8rem; }
-  .answer-actions { gap: .45rem; }
-  .answer-button { min-width: 0; flex: 1; padding: .82rem .4rem; font-size: .83rem; }
-  .answer-button span:first-child { width: 25px; height: 25px; }
+  .card-content h2 { font-size: clamp(1.85rem, min(12vw, 7dvh), 4rem); }
+  .card-content p { margin-top: .45rem; font-size: clamp(.95rem, 4dvh, 1.35rem); }
+  .card-kicker { font-size: .65rem; }
+  .turn-hint { padding: .42rem .62rem; font-size: .69rem; }
+  .type-badge { top: .65rem; right: .65rem; padding: .36rem .5rem; font-size: .62rem; }
+  .answer-actions { flex: 0 0 auto; gap: .4rem; margin-top: .55rem; }
+  .answer-button { min-width: 0; flex: 1; padding: .6rem .3rem; font-size: .78rem; }
+  .answer-button span:first-child { width: 23px; height: 23px; }
+  .show-answer { flex: 0 0 auto; margin-top: .5rem; padding: .55rem .9rem; font-size: .8rem; }
   .profile-stats { grid-template-columns: repeat(2,1fr); }
   .editor-topline, .form-grid.three, .autofill-row, .paradigm-grid { grid-template-columns: 1fr; }
   .verb-check-grid { grid-template-columns: 1fr; max-height: 300px; }
