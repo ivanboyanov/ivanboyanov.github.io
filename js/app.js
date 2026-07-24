@@ -43,6 +43,7 @@ const state = {
   audioEnabled: localStorage.getItem("verbfit-audio") === "true",
   authMode: "login",
   editingPersonalListId: null,
+  editingPublicListId: null,
   personalSelection: new Set(),
   publicSelection: new Set(),
   saveTimer: null
@@ -752,19 +753,25 @@ async function savePublicList() {
     return;
   }
   try {
-    const data = { title, description, verbIds: [...state.publicSelection], active: true, createdAt: serverTimestamp(), createdBy: state.user.uid };
-    const reference = await addDoc(collection(state.db, "publicLists"), data);
-    state.publicLists.push({ id: reference.id, ...data });
-    state.publicSelection = new Set();
-    $("#publicListTitle").value = "";
-    $("#publicListDescription").value = "";
-    $("#publicVerbSearch").value = "";
+    const verbIds = [...state.publicSelection];
+    const editingId = state.editingPublicListId;
+    if (editingId) {
+      const data = { title, description, verbIds, active: true, updatedAt: serverTimestamp() };
+      await setDoc(doc(state.db, "publicLists", editingId), data, { merge: true });
+      state.publicLists = state.publicLists.map(list => list.id === editingId ? { ...list, ...data } : list);
+    } else {
+      const data = { title, description, verbIds, active: true, createdAt: serverTimestamp(), createdBy: state.user.uid };
+      const reference = await addDoc(collection(state.db, "publicLists"), data);
+      state.publicLists.push({ id: reference.id, ...data });
+    }
+    resetPublicListEditor();
     renderListSelect();
     refreshVerbGrids();
-    toast("Die Liste ist jetzt für alle sichtbar.");
+    chooseNextCard();
+    toast(editingId ? "Öffentliche Liste aktualisiert." : "Die Liste ist jetzt für alle sichtbar.");
   } catch (error) {
     console.error(error);
-    $("#adminListError").textContent = "Die Liste konnte nicht gespeichert werden.";
+    $("#adminListError").textContent = "Die Liste konnte nicht gespeichert werden. Prüfe Adminrolle und Firestore-Regeln.";
   }
 }
 
@@ -772,6 +779,8 @@ function renderAdminPublicLists() {
   const box = $("#adminPublicLists");
   if (!box) return;
   box.innerHTML = "";
+  $("#savePublicListButton").textContent = state.editingPublicListId ? "Änderungen speichern" : "Öffentliche Liste speichern";
+  $("#cancelPublicListEditButton").hidden = !state.editingPublicListId;
   const lists = state.publicLists;
   if (!lists.length) {
     box.innerHTML = '<p class="form-note">Noch keine eigenen öffentlichen Listen.</p>';
@@ -779,12 +788,39 @@ function renderAdminPublicLists() {
   }
   lists.forEach(list => {
     const row = document.createElement("div");
-    row.className = "saved-list";
+    row.className = `saved-list${state.editingPublicListId === list.id ? " editing" : ""}`;
     row.innerHTML = `<div><strong></strong><small>${list.verbIds.length} Verben</small></div>`;
     row.querySelector("strong").textContent = list.title;
-    row.append(miniButton("Löschen", () => deletePublicList(list.id), true));
+    const actions = document.createElement("div");
+    actions.className = "saved-list-actions";
+    actions.append(
+      miniButton("Bearbeiten", () => editPublicList(list.id)),
+      miniButton("Löschen", () => deletePublicList(list.id), true)
+    );
+    row.append(actions);
     box.append(row);
   });
+}
+
+function editPublicList(id) {
+  const list = state.publicLists.find(item => item.id === id);
+  if (!list) return;
+  state.editingPublicListId = id;
+  state.publicSelection = new Set(list.verbIds);
+  $("#publicListTitle").value = list.title;
+  $("#publicListDescription").value = list.description || "";
+  $("#publicVerbSearch").value = "";
+  renderVerbCheckboxGrid("public");
+  renderAdminPublicLists();
+  $("#publicListTitle").focus();
+}
+
+function resetPublicListEditor() {
+  state.editingPublicListId = null;
+  state.publicSelection = new Set();
+  $("#publicListTitle").value = "";
+  $("#publicListDescription").value = "";
+  $("#publicVerbSearch").value = "";
 }
 
 async function deletePublicList(id) {
@@ -792,6 +828,7 @@ async function deletePublicList(id) {
   try {
     await deleteDoc(doc(state.db, "publicLists", id));
     state.publicLists = state.publicLists.filter(list => list.id !== id);
+    if (state.editingPublicListId === id) resetPublicListEditor();
     if (state.selectedList === `public:${id}`) state.selectedList = "all";
     renderListSelect();
     renderAdminPublicLists();
@@ -855,6 +892,11 @@ function bindEvents() {
   $("#saveAdminVerbButton").addEventListener("click", saveAdminVerb);
   $("#publicVerbSearch").addEventListener("input", () => renderVerbCheckboxGrid("public"));
   $("#savePublicListButton").addEventListener("click", savePublicList);
+  $("#cancelPublicListEditButton").addEventListener("click", () => {
+    resetPublicListEditor();
+    renderVerbCheckboxGrid("public");
+    renderAdminPublicLists();
+  });
 
   $$('[data-close]').forEach(button => button.addEventListener("click", () => closeDialog(button.dataset.close)));
   $$("dialog").forEach(dialog => dialog.addEventListener("click", event => {
