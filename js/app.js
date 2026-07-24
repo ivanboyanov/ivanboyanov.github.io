@@ -8,7 +8,7 @@ import {
   deleteDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { firebaseConfig, firebaseConfigured, ADMIN_DISPLAY_NAME } from "./firebase-config.js";
-import { BUILTIN_VERBS, BUILTIN_LISTS, TYPES, TYPE_ORDER, conjugateRegular } from "./verbs.js";
+import { BUILTIN_VERBS, TYPES, TYPE_ORDER, conjugateRegular } from "./verbs.js";
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
@@ -31,7 +31,7 @@ const state = {
   user: null,
   isAdmin: false,
   verbs: [...BUILTIN_VERBS],
-  publicLists: [...BUILTIN_LISTS],
+  publicLists: [],
   selectedTypes: new Set(TYPE_ORDER),
   selectedList: "all",
   currentCard: null,
@@ -122,7 +122,7 @@ function currentListVerbIds() {
   if (state.selectedList === "all") return null;
   const [kind, id] = state.selectedList.split(":");
   let list;
-  if (kind === "builtin" || kind === "public") list = state.publicLists.find(item => item.id === id);
+  if (kind === "public") list = state.publicLists.find(item => item.id === id);
   if (kind === "personal") list = state.userData.personalLists.find(item => item.id === id);
   return list ? new Set(list.verbIds) : null;
 }
@@ -266,7 +266,6 @@ function updateProfileUI() {
   $("#profileName").textContent = name;
   $("#profileTitle").textContent = name;
   $("#avatar").textContent = name.trim().charAt(0).toLocaleUpperCase("de-DE") || "G";
-  $("#guestBanner").hidden = Boolean(state.user);
   $("#logoutButton").hidden = !state.user;
   $("#profileLoginButton").hidden = Boolean(state.user);
   $("#manageListsButton").hidden = !state.user;
@@ -300,10 +299,7 @@ function renderListSelect() {
   const current = state.selectedList;
   select.innerHTML = '<option value="all">Alle Verben</option>';
 
-  const builtins = state.publicLists.filter(list => list.builtin);
-  const remote = state.publicLists.filter(list => !list.builtin);
-  addOptionGroup(select, "VerbFit-Listen", builtins, "builtin");
-  if (remote.length) addOptionGroup(select, "Öffentliche Listen", remote, "public");
+  if (state.publicLists.length) addOptionGroup(select, "Öffentliche Listen", state.publicLists, "public");
   if (state.userData.personalLists.length) addOptionGroup(select, "Meine Listen", state.userData.personalLists, "personal");
 
   const valid = [...select.options].some(option => option.value === current);
@@ -418,9 +414,9 @@ async function loadPublicData() {
     customVerbs.forEach(verb => merged.set(verb.id, verb));
     state.verbs = [...merged.values()].sort((a,b) => a.infinitive.localeCompare(b.infinitive, "de"));
 
-    const remoteLists = listSnapshot.docs.map(item => ({ id: item.id, ...item.data(), builtin: false }))
+    const remoteLists = listSnapshot.docs.map(item => ({ id: item.id, ...item.data() }))
       .filter(list => list.active !== false && Array.isArray(list.verbIds));
-    state.publicLists = [...BUILTIN_LISTS, ...remoteLists];
+    state.publicLists = remoteLists;
     renderListSelect();
     refreshVerbGrids();
     chooseNextCard();
@@ -758,7 +754,7 @@ async function savePublicList() {
   try {
     const data = { title, description, verbIds: [...state.publicSelection], active: true, createdAt: serverTimestamp(), createdBy: state.user.uid };
     const reference = await addDoc(collection(state.db, "publicLists"), data);
-    state.publicLists.push({ id: reference.id, ...data, builtin: false });
+    state.publicLists.push({ id: reference.id, ...data });
     state.publicSelection = new Set();
     $("#publicListTitle").value = "";
     $("#publicListDescription").value = "";
@@ -776,7 +772,7 @@ function renderAdminPublicLists() {
   const box = $("#adminPublicLists");
   if (!box) return;
   box.innerHTML = "";
-  const lists = state.publicLists.filter(list => !list.builtin);
+  const lists = state.publicLists;
   if (!lists.length) {
     box.innerHTML = '<p class="form-note">Noch keine eigenen öffentlichen Listen.</p>';
     return;
@@ -829,7 +825,6 @@ function bindEvents() {
   });
 
   $("#profileButton").addEventListener("click", () => openDialog("profileDialog"));
-  $("#openAuthButton").addEventListener("click", () => { setAuthMode("login"); openDialog("authDialog"); });
   $("#profileLoginButton").addEventListener("click", () => { closeDialog("profileDialog"); setAuthMode("login"); openDialog("authDialog"); });
   $("#loginTab").addEventListener("click", () => setAuthMode("login"));
   $("#registerTab").addEventListener("click", () => setAuthMode("register"));
