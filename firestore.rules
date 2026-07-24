@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true;
+    }
+
+    // Jeder Nutzer sieht und verändert ausschließlich sein eigenes Profil.
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && (!('personalLists' in request.resource.data)
+          || request.resource.data.personalLists.size() <= 3);
+    }
+
+    // Die Adminrolle wird nur manuell in der Firebase-Konsole vergeben.
+    match /admins/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    // Von Ivan hinzugefügte Verben und öffentliche Listen sind für Gäste lesbar.
+    match /verbs/{verbId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /publicLists/{listId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}
