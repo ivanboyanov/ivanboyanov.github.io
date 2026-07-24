@@ -46,6 +46,8 @@ const state = {
   editingPublicListId: null,
   personalSelection: new Set(),
   publicSelection: new Set(),
+  adminUsers: [],
+  selectedAdminUserId: null,
   saveTimer: null
 };
 
@@ -54,9 +56,19 @@ function defaultUserData(username) {
     username,
     progress: {},
     dailyCards: {},
+    dailyStats: {},
     stats: { total: 0, known: 0 },
     personalLists: []
   };
+}
+
+function sanitizeDailyStats(data) {
+  if (!data || typeof data !== "object") return {};
+  return Object.fromEntries(Object.entries(data).map(([key, value]) => {
+    const cards = Math.max(0, Number(value?.cards || 0));
+    const known = Math.min(cards, Math.max(0, Number(value?.known || 0)));
+    return [key, { cards, known, complete: value?.complete !== false }];
+  }));
 }
 
 function sanitizeUserData(data, fallbackName) {
@@ -64,6 +76,7 @@ function sanitizeUserData(data, fallbackName) {
     username: String(data?.username || fallbackName || "Lernende Person"),
     progress: data?.progress && typeof data.progress === "object" ? data.progress : {},
     dailyCards: data?.dailyCards && typeof data.dailyCards === "object" ? data.dailyCards : {},
+    dailyStats: sanitizeDailyStats(data?.dailyStats),
     stats: {
       total: Number(data?.stats?.total || 0),
       known: Number(data?.stats?.known || 0)
@@ -230,7 +243,14 @@ function rateCard(known) {
     state.userData.stats.total += 1;
     if (known) state.userData.stats.known += 1;
     const today = todayKey();
-    state.userData.dailyCards[today] = Number(state.userData.dailyCards[today] || 0) + 1;
+    const previousDailyCards = Number(state.userData.dailyCards[today] || 0);
+    const dailyRecord = state.userData.dailyStats[today];
+    state.userData.dailyStats[today] = {
+      cards: Number(dailyRecord?.cards || 0) + 1,
+      known: Number(dailyRecord?.known || 0) + (known ? 1 : 0),
+      complete: dailyRecord ? dailyRecord.complete !== false : previousDailyCards === 0
+    };
+    state.userData.dailyCards[today] = previousDailyCards + 1;
     scheduleUserSave();
   }
 
@@ -391,6 +411,7 @@ async function saveUserData() {
       username: state.userData.username,
       progress: state.userData.progress,
       dailyCards: state.userData.dailyCards,
+      dailyStats: state.userData.dailyStats,
       stats: state.userData.stats,
       personalLists: state.userData.personalLists,
       updatedAt: serverTimestamp()
@@ -430,6 +451,8 @@ async function loadPublicData() {
 async function handleAuthChange(user) {
   state.user = user;
   state.isAdmin = false;
+  state.adminUsers = [];
+  state.selectedAdminUserId = null;
   if (!user) {
     state.userData = defaultUserData("Gast");
     updateProfileUI();
@@ -840,10 +863,155 @@ async function deletePublicList(id) {
   }
 }
 
+function recentDayKeys(count = 14) {
+  const result = [];
+  const cursor = new Date();
+  cursor.setHours(12, 0, 0, 0);
+  for (let offset = count - 1; offset >= 0; offset -= 1) {
+    const date = new Date(cursor);
+    date.setDate(cursor.getDate() - offset);
+    result.push(todayKey(date));
+  }
+  return result;
+}
+
+function formatAdminDay(key) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Intl.DateTimeFormat("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit"
+  }).format(new Date(year, month - 1, day, 12));
+}
+
+function renderAdminUsers() {
+  const box = $("#adminUserList");
+  if (!box) return;
+  const search = $("#adminUserSearch").value.trim().toLocaleLowerCase("de-DE");
+  const users = state.adminUsers.filter(user =>
+    user.username.toLocaleLowerCase("de-DE").includes(search)
+  );
+  $("#adminUserCount").textContent = `${users.length} von ${state.adminUsers.length} Profilen`;
+  box.innerHTML = "";
+
+  if (!users.length) {
+    box.innerHTML = '<p class="form-note">Keine passenden Profile gefunden.</p>';
+    renderAdminUserDetail();
+    return;
+  }
+
+  users.forEach(user => {
+    const total = Number(user.stats?.total || 0);
+    const known = Number(user.stats?.known || 0);
+    const rate = total ? `${Math.round(known / total * 100)}%` : "–";
+    const lastActive = Object.keys(user.dailyCards || {})
+      .filter(key => Number(user.dailyCards[key] || 0) > 0)
+      .sort()
+      .at(-1);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `admin-user-row${state.selectedAdminUserId === user.id ? " active" : ""}`;
+    button.innerHTML = '<span><strong></strong><small></small></span><span class="admin-user-rate"></span>';
+    button.querySelector("strong").textContent = user.username;
+    button.querySelector("small").textContent = lastActive
+      ? `${total} Karten · zuletzt ${lastActive.split("-").reverse().join(".")}`
+      : `${total} Karten · noch keine Aktivität`;
+    button.querySelector(".admin-user-rate").textContent = rate;
+    button.setAttribute("aria-label", `${user.username}: Profilstatistik öffnen`);
+    button.addEventListener("click", () => {
+      state.selectedAdminUserId = user.id;
+      renderAdminUsers();
+    });
+    box.append(button);
+  });
+
+  renderAdminUserDetail();
+}
+
+function renderAdminUserDetail() {
+  const box = $("#adminUserDetail");
+  if (!box) return;
+  const user = state.adminUsers.find(item => item.id === state.selectedAdminUserId);
+  if (!user) {
+    box.innerHTML = '<div class="admin-user-empty"><strong>Profil auswählen</strong><span>Tippe links auf einen Namen, um die letzten 14 Tage zu sehen.</span></div>';
+    return;
+  }
+
+  const days = recentDayKeys(14);
+  const dailyCards = user.dailyCards || {};
+  const dailyStats = user.dailyStats || {};
+  const entries = days.map(key => {
+    const cards = Math.max(0, Number(dailyCards[key] || 0));
+    const record = dailyStats[key];
+    const exact = Boolean(record && record.complete !== false && Number(record.cards || 0) === cards);
+    const known = exact ? Math.min(cards, Math.max(0, Number(record.known || 0))) : 0;
+    return { key, cards, known, rate: exact && cards ? Math.round(known / cards * 100) : null };
+  });
+  const maxCards = Math.max(1, ...entries.map(entry => entry.cards));
+  const periodCards = entries.reduce((sum, entry) => sum + entry.cards, 0);
+  const ratedEntries = entries.filter(entry => entry.rate !== null);
+  const ratedCards = ratedEntries.reduce((sum, entry) => sum + entry.cards, 0);
+  const ratedKnown = ratedEntries.reduce((sum, entry) => sum + entry.known, 0);
+  const periodRate = ratedCards ? `${Math.round(ratedKnown / ratedCards * 100)}%` : "–";
+
+  box.innerHTML = `
+    <div class="admin-user-detail-heading">
+      <div><p class="eyebrow">14-Tage-Übersicht</p><h3 id="adminUserDetailName"></h3></div>
+      <div class="admin-user-summary">
+        <span><strong>${periodCards}</strong>Karten</span>
+        <span><strong>${periodRate}</strong>Treffer</span>
+      </div>
+    </div>
+    <div class="admin-activity-head" aria-hidden="true"><span>Tag</span><span>Karten</span><span>Treffer</span></div>
+    <div class="admin-activity-chart" id="adminActivityChart"></div>
+  `;
+  $("#adminUserDetailName").textContent = user.username;
+  const chart = $("#adminActivityChart");
+  entries.forEach(entry => {
+    const row = document.createElement("div");
+    row.className = "admin-activity-row";
+    row.innerHTML = `
+      <span class="admin-day-label"></span>
+      <span class="admin-card-volume"><i style="width:${Math.round(entry.cards / maxCards * 100)}%"></i><b>${entry.cards}</b></span>
+      <span class="admin-day-rate${entry.rate === null ? " unavailable" : ""}">${entry.rate === null ? "–" : `${entry.rate}%`}</span>
+    `;
+    row.querySelector(".admin-day-label").textContent = formatAdminDay(entry.key);
+    row.setAttribute("aria-label", `${formatAdminDay(entry.key)}: ${entry.cards} Karten, ${entry.rate === null ? "Trefferquote nicht verfügbar" : `${entry.rate} Prozent Treffer`}`);
+    chart.append(row);
+  });
+}
+
+async function loadAdminUsers(force = false) {
+  if (!state.isAdmin || !state.db) return;
+  if (state.adminUsers.length && !force) {
+    renderAdminUsers();
+    return;
+  }
+  $("#adminUsersError").textContent = "";
+  $("#adminUserList").innerHTML = '<p class="form-note">Profile werden geladen …</p>';
+  try {
+    const snapshot = await getDocs(collection(state.db, "users"));
+    state.adminUsers = snapshot.docs.map(item => ({
+      id: item.id,
+      ...sanitizeUserData(item.data(), `Profil ${item.id.slice(0, 6)}`)
+    })).sort((a, b) => a.username.localeCompare(b.username, "de"));
+    if (!state.adminUsers.some(user => user.id === state.selectedAdminUserId)) {
+      state.selectedAdminUserId = state.adminUsers[0]?.id || null;
+    }
+    renderAdminUsers();
+  } catch (error) {
+    console.error(error);
+    $("#adminUsersError").textContent = "Die Profile konnten nicht geladen werden. Prüfe die veröffentlichten Firestore-Regeln.";
+    $("#adminUserList").innerHTML = "";
+  }
+}
+
 function switchAdminTab(tab) {
   $$('[data-admin-tab]').forEach(button => button.classList.toggle("active", button.dataset.adminTab === tab));
   $("#adminVerbPanel").hidden = tab !== "verb";
   $("#adminListPanel").hidden = tab !== "list";
+  $("#adminUsersPanel").hidden = tab !== "users";
+  if (tab === "users") loadAdminUsers();
 }
 
 function bindEvents() {
@@ -897,6 +1065,8 @@ function bindEvents() {
     renderVerbCheckboxGrid("public");
     renderAdminPublicLists();
   });
+  $("#adminUserSearch").addEventListener("input", renderAdminUsers);
+  $("#refreshAdminUsersButton").addEventListener("click", () => loadAdminUsers(true));
 
   $$('[data-close]').forEach(button => button.addEventListener("click", () => closeDialog(button.dataset.close)));
   $$("dialog").forEach(dialog => dialog.addEventListener("click", event => {
