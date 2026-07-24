@@ -15,9 +15,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true;
     }
 
-    // Jeder Nutzer sieht und verändert ausschließlich sein eigenes Profil.
+    // Nutzer sehen ihr eigenes Profil; aktive Admins dürfen Profile auswerten.
     match /users/{uid} {
-      allow read, delete: if isOwner(uid);
+      allow read: if isOwner(uid) || isAdmin();
+      allow delete: if isOwner(uid);
       allow create, update: if isOwner(uid)
         && (!('personalLists' in request.resource.data)
           || request.resource.data.personalLists.size() <= 3);
