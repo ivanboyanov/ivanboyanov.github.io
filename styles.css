@@ -87,10 +87,8 @@ button { cursor: pointer; }
 .streak { display: inline-flex; align-items: center; gap: .12rem; padding: .32rem .45rem; border-radius: 9px; background: var(--yellow-100); color: #854d0e; }
 
 main { width: min(1120px, calc(100% - 2rem)); margin: 0 auto; padding: clamp(2rem, 6vw, 4.5rem) 0 3rem; }
-.hero-copy { display: flex; justify-content: space-between; align-items: flex-end; gap: 2rem; margin-bottom: 1.3rem; }
+.session-overview { display: flex; justify-content: flex-end; margin-bottom: 1.3rem; }
 .eyebrow { margin: 0 0 .35rem; color: var(--purple-700); font-size: .76rem; font-weight: 950; letter-spacing: .13em; text-transform: uppercase; }
-h1 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); line-height: .98; letter-spacing: -.055em; }
-.hero-copy > div > p:last-child { max-width: 630px; margin: .85rem 0 0; color: var(--muted); font-size: clamp(.95rem, 2vw, 1.1rem); line-height: 1.55; }
 .session-box { display: flex; gap: .55rem; flex: 0 0 auto; }
 .session-box div { min-width: 82px; padding: .75rem .65rem; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.78); text-align: center; }
 .session-box strong, .session-box span { display: block; }
@@ -130,10 +128,6 @@ h1 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); line-height: .98; letter-spac
 .show-answer { display: block; margin: 1rem auto 0; padding: .72rem 1.1rem; border: 0; border-radius: 14px; background: var(--yellow-400); color: var(--purple-950); font-weight: 950; }
 .show-answer[hidden] { display: none; }
 .empty-state { max-width: 600px; margin: 2rem auto; text-align: center; color: var(--muted); }
-.guest-banner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding: 1rem 1.15rem; border-radius: 20px; background: var(--purple-950); color: white; }
-.guest-banner strong, .guest-banner span { display: block; }
-.guest-banner span { margin-top: .25rem; opacity: .72; font-size: .88rem; }
-
 .primary-button, .secondary-button, .danger-button { padding: .78rem 1rem; border-radius: 13px; font-weight: 900; }
 .primary-button { border: 0; background: var(--purple-700); color: white; box-shadow: 0 8px 20px rgba(109,40,217,.22); }
 .secondary-button { border: 1px solid #c4b5fd; background: var(--purple-50); color: var(--purple-800); }
@@ -196,8 +190,7 @@ h1 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); line-height: .98; letter-spac
   .profile-name, .button-text { display: none; }
   .list-picker { order: 4; flex-basis: 100%; }
   .list-picker select { width: 100%; max-width: none; }
-  .hero-copy { align-items: stretch; flex-direction: column; gap: 1.2rem; }
-  .session-box { align-self: stretch; }
+  .session-overview .session-box { width: 100%; }
   .session-box div { flex: 1; }
   .editor-topline, .form-grid.three { grid-template-columns: 1fr 1fr; }
   .verb-check-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -208,11 +201,21 @@ h1 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); line-height: .98; letter-spac
   .brand span:last-child { display: none; }
   .brand-mark { width: 40px; height: 40px; }
   .toolbar { gap: .35rem; flex: 1; }
+  .toolbar-menu { position: static; }
+  .menu-panel {
+    top: calc(100% + .35rem);
+    left: .75rem;
+    right: .75rem;
+    z-index: 1;
+    width: auto;
+    max-height: min(24rem, calc(100dvh - 7rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
   .toolbar-button, .profile-button { min-height: 40px; }
   .toolbar-button { padding: .55rem .65rem; }
   .profile-button { margin-left: auto; }
   main { width: min(100% - 1rem, 1120px); padding-top: 2rem; }
-  h1 { font-size: 2.35rem; }
   .session-box { gap: .35rem; }
   .session-box div { min-width: 0; padding: .65rem .3rem; }
   .practice-area { border-radius: 22px; padding: .75rem; }
@@ -224,7 +227,6 @@ h1 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); line-height: .98; letter-spac
   .answer-actions { gap: .45rem; }
   .answer-button { min-width: 0; flex: 1; padding: .82rem .4rem; font-size: .83rem; }
   .answer-button span:first-child { width: 25px; height: 25px; }
-  .guest-banner { align-items: stretch; flex-direction: column; }
   .profile-stats { grid-template-columns: repeat(2,1fr); }
   .editor-topline, .form-grid.three, .autofill-row, .paradigm-grid { grid-template-columns: 1fr; }
   .verb-check-grid { grid-template-columns: 1fr; max-height: 300px; }
