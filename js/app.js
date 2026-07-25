@@ -22,7 +22,7 @@ const PRONOUNS = [
   { key: "wir", label: "wir", prompt: "wir", slot: 3 },
   { key: "ihr", label: "ihr", prompt: "ihr", slot: 4 },
   { key: "sie_pl", label: "sie", prompt: "sie – Plural", slot: 5 },
-  { key: "Sie", label: "Sie", prompt: "Sie", slot: 5 }
+  { key: "Sie", label: "Sie", prompt: "Sie – Höflichkeitsform, Plural", slot: 5 }
 ];
 
 const state = {
