@@ -188,6 +188,15 @@ function chooseNextCard() {
   if (state.audioEnabled) speakFront();
 }
 
+function ensureCurrentCard() {
+  if (!state.currentCard) {
+    chooseNextCard();
+    return;
+  }
+  const stillAvailable = availableVerbs().some(verb => verb.id === state.currentCard.verb.id);
+  if (!stillAvailable) chooseNextCard();
+}
+
 function renderCard() {
   const empty = !state.currentCard;
   $("#cardScene").hidden = empty;
@@ -441,7 +450,7 @@ async function loadPublicData() {
     state.publicLists = remoteLists;
     renderListSelect();
     refreshVerbGrids();
-    chooseNextCard();
+    ensureCurrentCard();
   } catch (error) {
     console.error(error);
     toast("Öffentliche Firebase-Daten konnten nicht geladen werden. Die eingebauten Verben funktionieren weiter.");
@@ -456,7 +465,7 @@ async function handleAuthChange(user) {
   if (!user) {
     state.userData = defaultUserData("Gast");
     updateProfileUI();
-    chooseNextCard();
+    ensureCurrentCard();
     return;
   }
 
@@ -480,7 +489,7 @@ async function handleAuthChange(user) {
 
   updateProfileUI();
   refreshVerbGrids();
-  chooseNextCard();
+  ensureCurrentCard();
 }
 
 function firebaseMessage(error) {
